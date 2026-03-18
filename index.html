@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SMSOnay Bakiye Sorgu</title>
+  <style>
+    /* önceki CSS aynı, kısalttım */
+    body { font-family: sans-serif; background: #f0f2f5; margin:0; padding:20px; display:flex; justify-content:center; min-height:100vh; }
+    .container { background:white; padding:2rem; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.1); max-width:400px; width:100%; }
+    h1 { text-align:center; margin-bottom:1.5rem; }
+    .form-group { margin-bottom:1.2rem; }
+    label { display:block; margin-bottom:0.4rem; font-weight:600; }
+    input { width:100%; padding:10px; border:1px solid #ddd; border-radius:6px; }
+    button { width:100%; padding:12px; background:#0066ff; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:600; }
+    button:hover { background:#0055dd; }
+    button:disabled { background:#aaa; }
+    #result { margin-top:1.5rem; padding:1rem; border-radius:6px; text-align:center; }
+    .success { background:#e6ffe6; color:#006600; border:1px solid #b3ffb3; }
+    .error { background:#ffe6e6; color:#cc0000; border:1px solid #ffb3b3; }
+    .loader { border:4px solid #f3f3f3; border-top:4px solid #0066ff; border-radius:50%; width:24px; height:24px; animation:spin 1s linear infinite; margin:1rem auto; display:none; }
+    @keyframes spin { 0% { transform:rotate(0deg); } 100% { transform:rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>SMSOnay Sorgu</h1>
+  
+  <div class="form-group">
+    <label>E-posta</label>
+    <input type="email" id="email" placeholder="ornek@email.com" required />
+  </div>
+  
+  <div class="form-group">
+    <label>Şifre</label>
+    <input type="password" id="password" placeholder="••••••••" required />
+  </div>
+  
+  <button id="btn">Sorgula</button>
+  
+  <div class="loader" id="loader"></div>
+  
+  <div id="result"></div>
+</div>
+
+<script>
+const API_URL = 'https://kaicheckerz-backend.onrender.com/check';  // ← Backend deploy sonrası adresini buraya yaz (aşağıda anlatacağım)
+
+document.getElementById('btn').addEventListener('click', async () => {
+  const email = document.getElementById('email').value.trim();
+  const pass = document.getElementById('password').value.trim();
+  const result = document.getElementById('result');
+  const loader = document.getElementById('loader');
+  const btn = document.getElementById('btn');
+
+  if (!email || !pass) {
+    result.textContent = 'Bilgileri doldurunuz.';
+    result.className = 'error';
+    return;
+  }
+
+  result.textContent = '';
+  result.className = '';
+  loader.style.display = 'block';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user: email, pass })
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      result.innerHTML = data.fullDetail;
+      result.className = 'success';
+    } else {
+      result.textContent = data.reason || 'Hata oluştu';
+      result.className = 'error';
+    }
+  } catch (err) {
+    result.textContent = 'Bağlantı sorunu: ' + err.message;
+    result.className = 'error';
+  } finally {
+    loader.style.display = 'none';
+    btn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>
