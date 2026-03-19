@@ -6,6 +6,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Statik dosyaları public klasöründen sun
+app.use(express.static("public"));
+
 app.post("/checkAccount", async (req, res) => {
   const { user, pass } = req.body;
   const result = await checkAccount(user, pass);
