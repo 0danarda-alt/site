@@ -1,88 +1,75 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SMSOnay Sorgu</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Samed | Dashboard</title>
   <style>
-    body { font-family: sans-serif; background: #f4f4f9; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-    .container { background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 400px; width: 100%; }
-    h1 { text-align: center; color: #333; }
-    label { display: block; margin: 10px 0 5px; font-weight: bold; }
-    input { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 5px; }
-    button { width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
-    button:hover { background: #0056b3; }
-    button:disabled { background: #aaa; cursor: not-allowed; }
-    #result { margin-top: 20px; padding: 15px; border-radius: 5px; text-align: center; font-weight: bold; }
-    .success { background: #d4edda; color: #155724; }
-    .error { background: #f8d7da; color: #721c24; }
-    .loader { border: 4px solid #f3f3f3; border-top: 4px solid #007bff; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 20px auto; display: none; }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    body { font-family: Arial, sans-serif; background: #0d0d0d; color: #e0e0e0; margin:0; padding:20px; }
+    .container { max-width: 800px; margin: 0 auto; }
+    h1 { text-align: center; color: #00ccff; margin-bottom: 30px; }
+    details { margin-bottom: 20px; background: #1a1a1a; border-radius: 8px; overflow: hidden; }
+    summary { padding: 15px 20px; background: #222; cursor: pointer; font-weight: bold; font-size: 1.2rem; }
+    summary:hover { background: #333; }
+    ul { list-style: none; padding: 0; margin: 0; }
+    li { border-top: 1px solid #333; }
+    a { display: block; padding: 15px 20px; color: #00ccff; text-decoration: none; transition: all 0.2s; }
+    a:hover { background: #2a2a2a; padding-left: 30px; }
+    .pfp { display: block; margin: 30px auto; width: 80px; border-radius: 50%; border: 3px solid #00ccff; }
+    .footer { text-align: center; font-size: 0.9rem; color: #888; margin-top: 40px; }
+    .loading { text-align: center; color: #ffcc00; margin: 20px 0; }
   </style>
 </head>
 <body>
+  <div class="container">
+    <h1>Samed</h1>
 
-<div class="container">
-  <h1>SMSOnay Bakiye & Numara Sorgu</h1>
-  
-  <label for="email">E-posta</label>
-  <input type="email" id="email" placeholder="ornek@email.com" required>
-  
-  <label for="password">Şifre</label>
-  <input type="password" id="password" placeholder="Şifreniz" required>
-  
-  <button id="btnSorgula">Sorgula</button>
-  
-  <div class="loader" id="loader"></div>
-  
-  <div id="result"></div>
-</div>
+    <details open>
+      <summary>Checkers ▼</summary>
+      <ul>
+        <li><a href="steam-checker.html">STEAM - Level & Games (Full Capture)</a></li>
+        <li><a href="#">HOTMAIL - Outlook & Turbo Checker</a></li>
+        <li><a href="#">MINECRAFT - Full Capture Checker</a></li>
+        <li><a href="#">DISNEY+ - Premium & Free Checker</a></li>
+        <li><a href="#">TABII - Premium & Free</a></li>
+        <li><a href="#">DISCORD - Token Checker</a></li>
+        <li><a href="#">EZGLOBAL - Full Capture & Bakiye</a></li>
+        <li><a href="#">EPINFY - Professional Checker</a></li>
+        <li><a href="#">OYUNDINAR - Bakiye & Siparişler</a></li>
+        <li><a href="#">EXXEN - Full Capture</a></li>
+        <li><a href="#">PROXY CHECKER - High Speed Threads</a></li>
+        <li><a href="#">FENIX OYUN - Serial Keys</a></li>
+        <li><a href="#">UCUZGAMES - Full Capture & Stock</a></li>
+        <li><a href="#">SMS ONAY HİZMETİ - Site 1 (Bakiye)</a></li>
+        <li><a href="#">SMSONAYCOM - Site 2 (Yeni)</a></li>
+        <li><a href="#">XHANGER - Full Capture</a></li>
+        <li><a href="#">BAYIGRAM - Bakiye Checker</a></li>
+      </ul>
+    </details>
 
-<script>
-const API_URL = '/check';  // Aynı siteden POST atıyoruz
+    <details open>
+      <summary>Tools ▼</summary>
+      <ul>
+        <li><a href="#">DUPLICATE REMOVER - Aynı hesapları temizler</a></li>
+        <li><a href="#">COMBO FIXER - Karışık comboları temizler</a></li>
+        <li><a href="#">CAPTURE REMOVER - Sağdaki capture verilerini siler</a></li>
+      </ul>
+    </details>
 
-document.getElementById('btnSorgula').addEventListener('click', async () => {
-  const email = document.getElementById('email').value.trim();
-  const pass = document.getElementById('password').value.trim();
-  const resultDiv = document.getElementById('result');
-  const loader = document.getElementById('loader');
-  const btn = document.getElementById('btnSorgula');
+    <img src="https://cdn.discordapp.com/embed/avatars/0.png" alt="PFP" class="pfp">
 
-  if (!email || !pass) {
-    resultDiv.textContent = 'Lütfen tüm alanları doldurun';
-    resultDiv.className = 'error';
-    return;
-  }
+    <div class="loading">Yükleniyor...</div>
 
-  resultDiv.textContent = '';
-  resultDiv.className = '';
-  loader.style.display = 'block';
-  btn.disabled = true;
+    <div class="footer">@arada Profil</div>
+  </div>
 
-  try {
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user: email, pass })
+  <script>
+    setTimeout(() => document.querySelector('.loading').style.display = 'none', 2000);
+    document.querySelectorAll('summary').forEach(s => {
+      s.addEventListener('click', () => {
+        s.textContent = s.textContent.includes('▼') ? s.textContent.replace('▼', '▲') : s.textContent.replace('▲', '▼');
+      });
     });
-
-    const data = await response.json();
-
-    if (data.success) {
-      resultDiv.textContent = data.fullDetail;
-      resultDiv.className = 'success';
-    } else {
-      resultDiv.textContent = data.reason || 'Giriş başarısız';
-      resultDiv.className = 'error';
-    }
-  } catch (err) {
-    resultDiv.textContent = 'Hata: ' + err.message;
-    resultDiv.className = 'error';
-  } finally {
-    loader.style.display = 'none';
-    btn.disabled = false;
-  }
-});
-</script>
+  </script>
 </body>
 </html>
