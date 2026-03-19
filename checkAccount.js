@@ -6,7 +6,6 @@ const app = express();
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-// Steam login deneme endpoint'i
 app.post("/login", async (req, res) => {
   const { username, password } = req.body;
 
@@ -22,7 +21,7 @@ app.post("/login", async (req, res) => {
   const body = new URLSearchParams({
     username,
     password
-    // Eğer finalizelogin başka parametre istiyorsa buraya ekleyeceğiz
+    // finalizelogin’in istediği ek parametreleri buraya ekleyeceğiz
   });
 
   try {
@@ -31,8 +30,6 @@ app.post("/login", async (req, res) => {
       body,
       { headers }
     );
-
-    // Dönen cevabı direkt kullanıcıya gönder
     res.json(resp.data);
   } catch (err) {
     console.error("Login isteği hata verdi:", err.message);
@@ -40,7 +37,7 @@ app.post("/login", async (req, res) => {
   }
 });
 
-// Render için port ayarı
+// Render’ın verdiği portu kullan
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server çalışıyor: http://localhost:${PORT}`);
