@@ -1,6 +1,15 @@
+const express = require("express");
 const axios = require("axios");
+const bodyParser = require("body-parser");
 
-async function steamLogin(username, password) {
+const app = express();
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
+
+// Steam login deneme endpoint'i
+app.post("/login", async (req, res) => {
+  const { username, password } = req.body;
+
   const headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
     "Origin": "https://steamcommunity.com",
@@ -13,7 +22,7 @@ async function steamLogin(username, password) {
   const body = new URLSearchParams({
     username,
     password
-    // finalizelogin’in istediği ek parametreleri buraya ekleyeceğiz
+    // Eğer finalizelogin başka parametre istiyorsa buraya ekleyeceğiz
   });
 
   try {
@@ -22,12 +31,17 @@ async function steamLogin(username, password) {
       body,
       { headers }
     );
-    console.log(resp.data);
-    return resp.data;
-  } catch (err) {
-    console.error("Login isteği hata verdi:", err.response?.data || err.message);
-  }
-}
 
-// Test
-steamLogin("seninKullaniciAdin", "seninSifren");
+    // Dönen cevabı direkt kullanıcıya gönder
+    res.json(resp.data);
+  } catch (err) {
+    console.error("Login isteği hata verdi:", err.message);
+    res.status(500).json({ error: err.message, details: err.response?.data });
+  }
+});
+
+// Render için port ayarı
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server çalışıyor: http://localhost:${PORT}`);
+});
