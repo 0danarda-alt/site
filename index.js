@@ -1,7 +1,8 @@
 const express = require('express');
-const cors = require('cors'); // CORS için ekle, frontend'den istek gelsin
+const path = require('path'); // path modülü ekle
+const cors = require('cors'); // CORS için (gerek kalmasa da güvenli olsun)
 
-// Senin verdiğin checker fonksiyonu (kopyala buraya)
+// Senin checker fonksiyonu (değişiklik yok)
 const checker = async (user, pass) => {
   const axios = require('axios');
   const { wrapper } = require('axios-cookiejar-support');
@@ -41,21 +42,29 @@ const checker = async (user, pass) => {
 };
 
 const app = express();
-app.use(express.json());
-app.use(cors()); // Frontend'den istek kabul et (güvenlik için production'da restrict edebilirsin)
 
+app.use(express.json());
+app.use(cors()); // Frontend aynı domain'den gelse bile güvenli olsun
+
+// Statik dosyaları kök dizinden serve et (index.html otomatik açılır)
+app.use(express.static(path.join(__dirname)));
+
+// API endpoint
 app.post('/check', async (req, res) => {
   const { user, pass } = req.body;
   if (!user || !pass) {
     return res.status(400).json({ success: false, reason: 'E-posta ve şifre gerekli' });
   }
-
   const result = await checker(user, pass);
   res.json(result);
 });
 
-// Render'ın kullandığı portu dinle
+// Tüm diğer GET istekleri için index.html dön (tarayıcıda siteyi açınca formu gösterir)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Backend ${PORT} portunda çalışıyor`);
+  console.log(`Server ${PORT} portunda çalışıyor - https://kaicheckerz.onrender.com`);
 });
