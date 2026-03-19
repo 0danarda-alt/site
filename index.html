@@ -1,74 +1,50 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Samed | Dashboard</title>
+  <meta charset="UTF-8">
+  <title>Steam Hesap Kontrol</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #0d0d0d; color: #e0e0e0; margin:0; padding:20px; }
-    .container { max-width: 800px; margin: 0 auto; }
-    h1 { text-align: center; color: #00ccff; margin-bottom: 30px; }
-    details { margin-bottom: 20px; background: #1a1a1a; border-radius: 8px; overflow: hidden; }
-    summary { padding: 15px 20px; background: #222; cursor: pointer; font-weight: bold; font-size: 1.2rem; }
-    summary:hover { background: #333; }
-    ul { list-style: none; padding: 0; margin: 0; }
-    li { border-top: 1px solid #333; }
-    a { display: block; padding: 15px 20px; color: #00ccff; text-decoration: none; transition: all 0.2s; }
-    a:hover { background: #2a2a2a; padding-left: 30px; }
-    .pfp { display: block; margin: 30px auto; width: 80px; border-radius: 50%; border: 3px solid #00ccff; }
-    .footer { text-align: center; font-size: 0.9rem; color: #888; margin-top: 40px; }
-    .loading { text-align: center; color: #ffcc00; margin: 20px 0; }
+    textarea { width: 400px; height: 200px; }
+    #result { margin-top: 20px; white-space: pre-line; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Samed</h1>
+  <h3>Hesapları gir (isim:şifre formatında, her satır bir hesap):</h3>
+  <textarea id="accounts"></textarea><br>
+  <button id="startBtn">Başlat</button>
 
-    <details open>
-      <summary>Checkers ▼</summary>
-      <ul>
-        <li><a href="steam-checker.html">STEAM - Level & Games (Full Capture)</a></li>
-        <li><a href="#">HOTMAIL - Outlook & Turbo Checker</a></li>
-        <li><a href="#">MINECRAFT - Full Capture Checker</a></li>
-        <li><a href="#">DISNEY+ - Premium & Free Checker</a></li>
-        <li><a href="#">TABII - Premium & Free</a></li>
-        <li><a href="#">DISCORD - Token Checker</a></li>
-        <li><a href="#">EZGLOBAL - Full Capture & Bakiye</a></li>
-        <li><a href="#">EPINFY - Professional Checker</a></li>
-        <li><a href="#">OYUNDINAR - Bakiye & Siparişler</a></li>
-        <li><a href="#">EXXEN - Full Capture</a></li>
-        <li><a href="#">PROXY CHECKER - High Speed Threads</a></li>
-        <li><a href="#">FENIX OYUN - Serial Keys</a></li>
-        <li><a href="#">UCUZGAMES - Full Capture & Stock</a></li>
-        <li><a href="#">SMS ONAY HİZMETİ - Site 1 (Bakiye)</a></li>
-        <li><a href="#">SMSONAYCOM - Site 2 (Yeni)</a></li>
-        <li><a href="#">XHANGER - Full Capture</a></li>
-        <li><a href="#">BAYIGRAM - Bakiye Checker</a></li>
-      </ul>
-    </details>
-
-    <details open>
-      <summary>Tools ▼</summary>
-      <ul>
-        <li><a href="#">DUPLICATE REMOVER - Aynı hesapları temizler</a></li>
-        <li><a href="#">COMBO FIXER - Karışık comboları temizler</a></li>
-        <li><a href="#">CAPTURE REMOVER - Sağdaki capture verilerini siler</a></li>
-      </ul>
-    </details>
-
-    <img src="https://cdn.discordapp.com/embed/avatars/0.png" alt="PFP" class="pfp">
-
-    <div class="loading">Yükleniyor...</div>
-
-    <div class="footer">@arada Profil</div>
-  </div>
+  <div id="result"></div>
 
   <script>
-    setTimeout(() => document.querySelector('.loading').style.display = 'none', 2000);
-    document.querySelectorAll('summary').forEach(s => {
-      s.addEventListener('click', () => {
-        s.textContent = s.textContent.includes('▼') ? s.textContent.replace('▼', '▲') : s.textContent.replace('▲', '▼');
-      });
+    document.getElementById("startBtn").addEventListener("click", async () => {
+      const accountsText = document.getElementById("accounts").value.trim();
+      const accounts = accountsText.split("\n"); // her satır ayrı hesap
+
+      let output = "";
+
+      for (const acc of accounts) {
+        const [user, pass] = acc.split(":");
+
+        try {
+          // Backend'e isteği gönder
+          const resp = await fetch("/checkAccount", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user, pass })
+          });
+          const data = await resp.json();
+
+          if (data.success && data.status === "hit") {
+            output += `Hesap: ${user} | HIT ✅\nOyunlar: ${data.games.join(" | ")}\n\n`;
+          } else {
+            output += `Hesap: ${user} | FAIL ❌ (${data.reason || "Hatalı giriş"})\n\n`;
+          }
+        } catch (err) {
+          output += `Hesap: ${user} | Hata: ${err.message}\n\n`;
+        }
+      }
+
+      document.getElementById("result").textContent = output;
     });
   </script>
 </body>
