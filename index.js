@@ -5,8 +5,8 @@ const app = express();
 app.use(express.json({ limit: '1mb' }));
 
 // Environment variables (Render dashboard'dan ekle)
-const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK_URL;
-const SECRET_KEY = process.env.SECRET_KEY;  // güçlü bir secret koy (32+ karakter)
+const DISCORD_WEBHOOK = https://discord.com/api/webhooks/1484452545714851962/qduzDkY1R_7Xma7NPSw7VG9O_WPlWndGdgT1Lerl-5GAqf0bTbmrcJUtLoVSwsCmTLcA;
+const SECRET_KEY = f8d9a2b3c4e5f6g8h9j0k1l2m3n4o5p_qwertyuiopasdfghjklzxcvbnm;  // güçlü bir secret koy (32+ karakter)
 
 if (!DISCORD_WEBHOOK || !SECRET_KEY) {
   console.error('DISCORD_WEBHOOK_URL veya SECRET_KEY eksik!');
