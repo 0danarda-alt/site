@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+temp-mails
+requests
+beautifulsoup4
+lxml
+websocket-client==1.7.0
+pydantic
