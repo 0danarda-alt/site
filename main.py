@@ -1,102 +1,78 @@
-from fastapi import FastAPI, HTTPException, Query
-from pydantic import BaseModel
-from temp_mails import Tenminemail_com  # En stabil olanı başlatalım
-# Alternatif dene: from temp_mails import Guerrillamail_com, Tempmail_id
-
-import re
+from fastapi import FastAPI, Query
+import requests
 import time
+import re
 from typing import Optional
 
-app = FastAPI(title="Temp Mail API - Multi-Provider (temp-mails paketi)")
+app = FastAPI(title="SharkLasers Temp Mail API (Guerrilla Backend)")
 
-class EmailResponse(BaseModel):
-    email: str
-    provider: str
+API_URL = "https://api.guerrillamail.com/ajax.php"
 
-class CodeResponse(BaseModel):
-    code: Optional[str] = None
-    message: str
-    sender: Optional[str] = None
+def api_call(params: dict):
+    resp = requests.get(API_URL, params=params, timeout=10)
+    resp.raise_for_status()
+    return resp.json()
 
-@app.get("/generate", response_model=EmailResponse)
-def generate_temp_email():
-    try:
-        # Provider seç (istediğini değiştir: Guerrillamail_com() vs.)
-        mail = Tenminemail_com()
-        return {
-            "email": mail.email,
-            "provider": mail.__class__.__name__
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Mail oluşturulamadı: {str(e)}")
+@app.get("/generate")
+def generate_sharklasers_email():
+    # Yeni session başlat + random email al
+    data = api_call({"f": "get_email_address"})
+    sid_token = data["sid_token"]
+    
+    # Domain'i sharklasers.com yap (random prefix ile)
+    set_data = api_call({
+        "f": "set_email_address",
+        "sid_token": sid_token,
+        "email_user": "",  # boş = random prefix
+        "domain": "sharklasers.com"
+    })
+    
+    return {
+        "email": set_data.get("email_addr", "Hata"),
+        "sid_token": sid_token  # polling için client tarafında veya session'da tut
+    }
 
-@app.get("/wait-for-code/{email}", response_model=CodeResponse)
-def wait_for_code(
-    email: str,
-    timeout: int = Query(180, description="Bekleme süresi saniye"),
-    interval: float = Query(5.0, description="Her kontrol arası saniye")
+@app.get("/wait-for-code")
+def wait_for_verification_code(
+    sid_token: str = Query(..., description="generate endpoint'inden aldığın sid_token"),
+    timeout: int = Query(180, description="Bekleme süresi (saniye)"),
+    interval: float = Query(5.0, description="Her kontrol arası")
 ):
-    try:
-        # Paket random üretir, mevcut email'i doğrudan kullanamayabiliriz → fallback polling
-        # Eğer provider aynı email'i desteklemiyorsa, yeni instance ile inbox check yap
-        mail = Tenminemail_com()  # Yeni instance (eğer email aynı domain'deyse şanslıyız)
+    start = time.time()
+    seen_ids = set()
 
-        # Bazı provider'larda email set edilebiliyor, dene:
-        # mail.email = email  # Çalışmazsa yorum satırına al
+    while time.time() - start < timeout:
+        inbox = api_call({"f": "check_email", "sid_token": sid_token})
+        mails = inbox.get("list", [])
 
-        start = time.time()
-        found_code = None
-        sender = None
+        for mail in mails:
+            mail_id = mail["mail_id"]
+            if mail_id in seen_ids:
+                continue
+            seen_ids.add(mail_id)
 
-        while time.time() - start < timeout:
-            try:
-                # Inbox'ı çek (paketin ortak method'u)
-                inbox = mail.get_inbox()  # List of dicts döner genelde
+            # Tam içeriği çek
+            content = api_call({"f": "fetch_email", "sid_token": sid_token, "email_id": mail_id})
+            mail_body = content.get("mail", {}).get("mail_body", "")
+            subject = content.get("mail", {}).get("mail_subject", "")
 
-                for msg in inbox:
-                    # Mesaj detayını al (subject + body)
-                    subject = msg.get("subject", "").lower()
-                    body = msg.get("body", "") or msg.get("text", "") or ""
+            full_text = (subject + " " + mail_body).lower()
 
-                    full_text = f"{subject} {body}"
+            # 6 haneli kod ara (OTP için en yaygın)
+            match = re.search(r'\b\d{6}\b', full_text)
+            if match:
+                return {
+                    "code": match.group(0),
+                    "from": mail.get("mail_from"),
+                    "subject": subject,
+                    "message": "Kod başarıyla bulundu!"
+                }
 
-                    # 6 haneli OTP kod ara
-                    match = re.search(r'\b\d{6}\b', full_text)
-                    if match:
-                        found_code = match.group(0)
-                        sender = msg.get("from", "Bilinmeyen")
-                        break  # İlk bulduğumuzu dön
+        time.sleep(interval)
 
-                    # Alternatif: "kodunuz" veya "verification code" kelimeleriyle filtrele
-                    if "kod" in full_text or "code" in full_text or "verify" in full_text:
-                        match = re.search(r'\b\d{6}\b', full_text)
-                        if match:
-                            found_code = match.group(0)
-                            sender = msg.get("from", "Bilinmeyen")
-                            break
+    return {"code": None, "message": f"{timeout} sn içinde kod gelmedi. Inbox boş veya gecikme var."}
 
-                if found_code:
-                    return {
-                        "code": found_code,
-                        "message": "Kod başarıyla bulundu!",
-                        "sender": sender
-                    }
-
-            except Exception as poll_err:
-                # Log için (Render log'larında görünür)
-                print(f"Polling hatası: {poll_err}")
-
-            time.sleep(interval)
-
-        return {
-            "code": None,
-            "message": f"{timeout} saniye içinde kod gelmedi. Provider: {mail.__class__.__name__}"
-        }
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Genel hata: {str(e)}")
-
-# Render dışında konsolda test için
+# Render dışında test için
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
