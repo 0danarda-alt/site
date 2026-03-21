@@ -1,15 +1,13 @@
-# main.py
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
-from temp_mails import Tenminemail_com  # En stabil provider'lardan biri
-# Alternatifler: Guerrillamail_com, Tempmail_id, Byom_de, Dropmail_me vs.
-# Tam liste: pip show temp-mails sonrası docs veya kaynak koduna bak
+from temp_mails import Tenminemail_com  # En stabil olanı başlatalım
+# Alternatif dene: from temp_mails import Guerrillamail_com, Tempmail_id
 
 import re
 import time
 from typing import Optional
 
-app = FastAPI(title="Temp Mail API - Multi Provider (temp-mails paketi)")
+app = FastAPI(title="Temp Mail API - Multi-Provider (temp-mails paketi)")
 
 class EmailResponse(BaseModel):
     email: str
@@ -18,13 +16,13 @@ class EmailResponse(BaseModel):
 class CodeResponse(BaseModel):
     code: Optional[str] = None
     message: str
-    from_email: Optional[str] = None
+    sender: Optional[str] = None
 
 @app.get("/generate", response_model=EmailResponse)
 def generate_temp_email():
     try:
-        # İstediğin provider'ı seç (Tenminemail_com çok hızlı ve stabil)
-        mail = Tenminemail_com()  # veya Guerrillamail_com() dene eğer bu yavaşlarsa
+        # Provider seç (istediğini değiştir: Guerrillamail_com() vs.)
+        mail = Tenminemail_com()
         return {
             "email": mail.email,
             "provider": mail.__class__.__name__
@@ -33,56 +31,72 @@ def generate_temp_email():
         raise HTTPException(status_code=500, detail=f"Mail oluşturulamadı: {str(e)}")
 
 @app.get("/wait-for-code/{email}", response_model=CodeResponse)
-def wait_for_verification_code(email: str, timeout: int = 180, poll_interval: float = 4.0):
+def wait_for_code(
+    email: str,
+    timeout: int = Query(180, description="Bekleme süresi saniye"),
+    interval: float = Query(5.0, description="Her kontrol arası saniye")
+):
     try:
-        # Mevcut mail objesini yeniden oluştur (paket state tutmuyor, her seferinde yeni instance)
-        # Not: Bazı provider'larda email'i constructor'a verebiliyorsun, ama genelde random üretir
-        # Bu yüzden polling için provider'ı yeniden başlatıyoruz (eğer destekliyorsa)
-        mail = Tenminemail_com()  # Eğer aynı email'i desteklemiyorsa → farklı provider dene
+        # Paket random üretir, mevcut email'i doğrudan kullanamayabiliriz → fallback polling
+        # Eğer provider aynı email'i desteklemiyorsa, yeni instance ile inbox check yap
+        mail = Tenminemail_com()  # Yeni instance (eğer email aynı domain'deyse şanslıyız)
 
-        # Eğer provider email'i kabul etmiyorsa (çoğu random üretir), hata verebilir
-        # Alternatif: mail.email = email  # bazı provider'larda çalışır, deneme yanılma
+        # Bazı provider'larda email set edilebiliyor, dene:
+        # mail.email = email  # Çalışmazsa yorum satırına al
 
-        start_time = time.time()
-        old_inbox_len = len(mail.get_inbox()) if hasattr(mail, 'get_inbox') else 0
+        start = time.time()
+        found_code = None
+        sender = None
 
-        while time.time() - start_time < timeout:
+        while time.time() - start < timeout:
             try:
-                inbox = mail.get_inbox()
-                new_messages = inbox[old_inbox_len:] if old_inbox_len > 0 else inbox
+                # Inbox'ı çek (paketin ortak method'u)
+                inbox = mail.get_inbox()  # List of dicts döner genelde
 
-                for msg in new_messages:
-                    # Mesaj içeriğini al
-                    content = mail.get_mail_content(message_id=msg.get("id"))
-                    body = content.get("body", "") or content.get("text", "")
-                    subject = content.get("subject", "")
+                for msg in inbox:
+                    # Mesaj detayını al (subject + body)
+                    subject = msg.get("subject", "").lower()
+                    body = msg.get("body", "") or msg.get("text", "") or ""
 
-                    full_text = f"{subject} {body}".lower()
+                    full_text = f"{subject} {body}"
 
-                    # 6 haneli kod ara (en yaygın OTP)
-                    code_match = re.search(r'\b\d{6}\b', full_text)
-                    if code_match:
-                        return {
-                            "code": code_match.group(0),
-                            "message": "Kod bulundu!",
-                            "from_email": msg.get("from")
-                        }
+                    # 6 haneli OTP kod ara
+                    match = re.search(r'\b\d{6}\b', full_text)
+                    if match:
+                        found_code = match.group(0)
+                        sender = msg.get("from", "Bilinmeyen")
+                        break  # İlk bulduğumuzu dön
 
-                    # Alternatif pattern'lar ekleyebilirsin
-                    # code_match = re.search(r'(?:kod|code|verify|onay).*?([a-z0-9]{8})', full_text, re.I)
+                    # Alternatif: "kodunuz" veya "verification code" kelimeleriyle filtrele
+                    if "kod" in full_text or "code" in full_text or "verify" in full_text:
+                        match = re.search(r'\b\d{6}\b', full_text)
+                        if match:
+                            found_code = match.group(0)
+                            sender = msg.get("from", "Bilinmeyen")
+                            break
 
-                old_inbox_len = len(inbox)
-            except Exception as inner_e:
-                print(f"Polling hatası: {inner_e}")  # log için
+                if found_code:
+                    return {
+                        "code": found_code,
+                        "message": "Kod başarıyla bulundu!",
+                        "sender": sender
+                    }
 
-            time.sleep(poll_interval)
+            except Exception as poll_err:
+                # Log için (Render log'larında görünür)
+                print(f"Polling hatası: {poll_err}")
 
-        return {"code": None, "message": f"{timeout} saniye içinde kod gelmedi."}
+            time.sleep(interval)
+
+        return {
+            "code": None,
+            "message": f"{timeout} saniye içinde kod gelmedi. Provider: {mail.__class__.__name__}"
+        }
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Hata: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Genel hata: {str(e)}")
 
-# Konsol testi için (Render dışında dene)
+# Render dışında konsolda test için
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
